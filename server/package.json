@@ -1,0 +1,20 @@
+{
+  "name": "hoops-signup-server",
+  "version": "1.0.0",
+  "description": "Lambda handlers for hoops signup",
+  "scripts": {
+    "dev": "nodemon dev-server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.556.0",
+    "@aws-sdk/lib-dynamodb": "^3.556.0",
+    "nodemailer": "^6.9.13",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.18.3",
+    "nodemon": "^3.1.0"
+  }
+}

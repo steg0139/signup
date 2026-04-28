@@ -1,0 +1,12 @@
+{
+  "app": "node infra/bin/app.js",
+  "watch": {
+    "include": ["server/**", "infra/**"],
+    "exclude": ["**/node_modules/**", "server/db/**"]
+  },
+  "context": {
+    "@aws-cdk/aws-apigateway:usagePlanKeyOrderInsensitiveId": true,
+    "@aws-cdk/aws-cloudfront:defaultSecurityPolicyTLSv1.2_2021": true,
+    "@aws-cdk/aws-s3:serverAccessLogsUseBucketPolicy": true
+  }
+}

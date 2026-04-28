@@ -1,0 +1,12 @@
+{
+  "name": "hoops-signup",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix server && npm install --prefix client && npm install --prefix infra",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "deploy": "npm run build && cdk deploy"
+  }
+}
