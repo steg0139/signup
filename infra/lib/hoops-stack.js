@@ -25,6 +25,15 @@ class HoopsStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
+    // GSI to query all signups by phone number (for dashboard stats)
+    table.addGlobalSecondaryIndex({
+      indexName: 'phone-index',
+      partitionKey: { name: 'phone', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'weekOf', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['name', 'cancelled', 'maybe', 'signedUpAt'],
+    });
+
     // ── S3 + CloudFront: React frontend ───────────────────────────────────────
     // Created first so we can pass the CloudFront URL to Lambda env vars
     const siteBucket = new s3.Bucket(this, 'SiteBucket', {
@@ -110,6 +119,9 @@ class HoopsStack extends Stack {
     adminSignups.addMethod('POST', adminIntegration);
     const adminSignupPhone = adminSignups.addResource('{phone}');
     adminSignupPhone.addMethod('DELETE', adminIntegration);
+
+    const adminStats = adminResource.addResource('stats');
+    adminStats.addMethod('GET', adminIntegration);
 
     const adminPlayers = adminResource.addResource('players');
     adminPlayers.addMethod('GET', adminIntegration);

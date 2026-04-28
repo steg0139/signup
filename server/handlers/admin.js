@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require('uuid');
 const {
   getWeekSignups, cancelSignup, putSignup,
   getAllPlayers, getPlayer, putPlayer, updatePlayer, deletePlayer,
+  getAttendanceStats,
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
 const { getUpcomingMonday } = require('../lib/weekOf');
@@ -76,6 +77,12 @@ async function addSignup(event) {
   return resp(200, { success: true });
 }
 
+// GET /admin/stats
+async function getStats(event) {
+  const stats = await getAttendanceStats();
+  return resp(200, { stats });
+}
+
 // GET /admin/players
 async function getPlayers(event) {
   const players = await getAllPlayers();
@@ -128,6 +135,7 @@ exports.handler = async (event) => {
     if (method === 'GET'    && path === '/api/admin/signups')              return await getSignups(event);
     if (method === 'POST'   && path === '/api/admin/signups')              return await addSignup(event);
     if (method === 'DELETE' && path.startsWith('/api/admin/signups/'))     return await removeSignup(event);
+    if (method === 'GET'    && path === '/api/admin/stats')                return await getStats(event);
     if (method === 'GET'    && path === '/api/admin/players')              return await getPlayers(event);
     if (method === 'POST'   && path === '/api/admin/players')              return await addPlayer(event);
     if (method === 'PATCH'  && path.startsWith('/api/admin/players/'))     return await patchPlayer(event);

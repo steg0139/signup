@@ -12,6 +12,9 @@ export default function AdminPage() {
   const [signupError, setSignupError] = useState('');
   const [players, setPlayers] = useState([]);
   const [rosterError, setRosterError] = useState('');
+  const [stats, setStats] = useState([]);
+  const [statsError, setStatsError] = useState('');
+  const [statsLoaded, setStatsLoaded] = useState(false);
 
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
@@ -40,6 +43,17 @@ export default function AdminPage() {
     }
   }, [password]);
 
+  const fetchStats = useCallback(async () => {
+    if (statsLoaded) return;
+    try {
+      const { ok, data } = await apiFetch('/admin/stats', { headers: adminHeaders });
+      if (ok) { setStats(data.stats); setStatsLoaded(true); }
+      else setStatsError(data.error);
+    } catch {
+      setStatsError('Failed to load stats.');
+    }
+  }, [password, statsLoaded]);
+
   async function handleLogin(e) {
     e.preventDefault();
     const { ok, data } = await apiFetch('/admin/signups', { headers: { 'x-admin-password': password } });
@@ -52,10 +66,10 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (authed) {
-      fetchSignups();
-      fetchRoster();
-    }
+    if (!authed) return;
+    if (tab === 'signups') fetchSignups();
+    if (tab === 'roster') fetchRoster();
+    if (tab === 'dashboard') fetchStats();
   }, [authed, tab]);
 
   async function removeSignup(phone) {
@@ -137,13 +151,17 @@ export default function AdminPage() {
 
       <div className="nav">
         <a href="#" className={tab === 'signups' ? 'active' : ''} onClick={e => { e.preventDefault(); setTab('signups'); }}>
-          This Week's Signups
+          This Week
         </a>
         <a href="#" className={tab === 'roster' ? 'active' : ''} onClick={e => { e.preventDefault(); setTab('roster'); }}>
-          Player Roster
+          Roster
+        </a>
+        <a href="#" className={tab === 'dashboard' ? 'active' : ''} onClick={e => { e.preventDefault(); setTab('dashboard'); }}>
+          Dashboard
         </a>
       </div>
 
+      {/* ── THIS WEEK ── */}
       {tab === 'signups' && (
         <>
           <div className="card">
@@ -219,6 +237,7 @@ export default function AdminPage() {
         </>
       )}
 
+      {/* ── ROSTER ── */}
       {tab === 'roster' && (
         <>
           <div className="card">
@@ -263,6 +282,57 @@ export default function AdminPage() {
             </form>
           </div>
         </>
+      )}
+
+      {/* ── DASHBOARD ── */}
+      {tab === 'dashboard' && (
+        <div className="card">
+          <h2>Attendance</h2>
+          <p className="subtext" style={{ marginBottom: '1rem' }}>
+            All-time stats based on confirmed signups. Sorted by games played.
+          </p>
+          {statsError && <div className="alert alert-error">{statsError}</div>}
+          {!statsLoaded && !statsError && <p className="subtext">Loading...</p>}
+          {statsLoaded && stats.length === 0 && <p className="subtext">No data yet.</p>}
+          {statsLoaded && stats.length > 0 && (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Games</th>
+                    <th>Streak</th>
+                    <th>Best</th>
+                    <th>Last played</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stats.map((p, i) => (
+                    <tr key={p.phone}>
+                      <td style={{ color: 'var(--text-muted)' }}>{i + 1}</td>
+                      <td>{p.name}</td>
+                      <td style={{ fontWeight: 600 }}>{p.total}</td>
+                      <td>
+                        {p.currentStreak > 0 ? (
+                          <span style={{ color: p.currentStreak >= 3 ? 'var(--orange)' : 'var(--text)' }}>
+                            {p.currentStreak} {p.currentStreak >= 3 ? '🔥' : ''}
+                          </span>
+                        ) : <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                      </td>
+                      <td style={{ color: 'var(--text-muted)' }}>{p.longestStreak}</td>
+                      <td className="subtext">
+                        {p.lastPlayed
+                          ? new Date(p.lastPlayed + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

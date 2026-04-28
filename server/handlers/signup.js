@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const {
   getSignup, getSignupByToken, putSignup, cancelSignup,
-  getWeekSignups, getPlayer, putPlayer,
+  getWeekSignups, getPlayer, putPlayer, updatePlayer,
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
 const { getUpcomingMonday } = require('../lib/weekOf');
@@ -63,10 +63,12 @@ async function createSignup(event) {
     return resp(409, { error: 'Sorry, the game is full this week!' });
   }
 
-  // Upsert player into roster
+  // Upsert player into roster — always update name to most recent
   const existingPlayer = await getPlayer(formattedPhone);
   if (!existingPlayer) {
     await putPlayer({ name: name.trim(), phone: formattedPhone, optedIn: true, createdAt: new Date().toISOString() });
+  } else if (existingPlayer.name !== name.trim()) {
+    await updatePlayer(formattedPhone, { name: name.trim() });
   }
 
   const cancelToken = uuidv4();
