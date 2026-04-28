@@ -164,21 +164,30 @@ class HoopsStack extends Stack {
     });
 
     // ── EventBridge scheduled reminders ──────────────────────────────────────
-    // Saturday 12:30pm ET = 16:30 UTC (EDT)
+    // Saturday 12:30pm CT = 17:30 UTC (CDT/summer) — email with Sunday reminder to copy/paste
     new events.Rule(this, 'SundayReminderRule', {
       ruleName: 'hoops-sunday-reminder',
-      schedule: events.Schedule.cron({ minute: '30', hour: '16', weekDay: 'SAT' }),
+      schedule: events.Schedule.cron({ minute: '30', hour: '17', weekDay: 'SAT' }),
       targets: [new targets.LambdaFunction(schedulerFn, {
         event: events.RuleTargetInput.fromObject({ 'detail-type': 'sunday-reminder' }),
       })],
     });
 
-    // Monday 8:30am ET = 12:30 UTC (EDT)
+    // Monday 8:30am CT = 13:30 UTC (CDT/summer) — email with day-of reminder
     new events.Rule(this, 'MondayReminderRule', {
       ruleName: 'hoops-monday-reminder',
-      schedule: events.Schedule.cron({ minute: '30', hour: '12', weekDay: 'MON' }),
+      schedule: events.Schedule.cron({ minute: '30', hour: '13', weekDay: 'MON' }),
       targets: [new targets.LambdaFunction(schedulerFn, {
         event: events.RuleTargetInput.fromObject({ 'detail-type': 'monday-reminder' }),
+      })],
+    });
+
+    // Monday 12:00pm CT = 17:00 UTC (CDT/summer) — email with count-based nudge
+    new events.Rule(this, 'MondayNoonReminderRule', {
+      ruleName: 'hoops-monday-noon-reminder',
+      schedule: events.Schedule.cron({ minute: '0', hour: '17', weekDay: 'MON' }),
+      targets: [new targets.LambdaFunction(schedulerFn, {
+        event: events.RuleTargetInput.fromObject({ 'detail-type': 'monday-noon-reminder' }),
       })],
     });
 

@@ -3,10 +3,11 @@ const { sendAdminEmail } = require('../lib/email');
 const { getUpcomingMonday } = require('../lib/weekOf');
 
 /**
- * EventBridge triggers this Lambda with a "type" in the event detail.
- * Two rules:
- *   - type: "sunday-reminder"  → Saturday 12:30pm ET
- *   - type: "monday-reminder"  → Monday 8:30am ET
+ * EventBridge triggers this Lambda with a "detail-type" in the event.
+ * Three rules:
+ *   - type: "sunday-reminder"       → Saturday 12:30pm CT
+ *   - type: "monday-reminder"       → Monday 8:30am CT
+ *   - type: "monday-noon-reminder"  → Monday 12:00pm CT
  */
 exports.handler = async (event) => {
   const type = event['detail-type'] || event.type;
@@ -37,20 +38,44 @@ exports.handler = async (event) => {
     const active = signups.filter(s => !s.cancelled);
     const confirmed = active.filter(s => !s.maybe);
     const maybes = active.filter(s => s.maybe);
-    const count = active.length;
 
     const confirmedList = confirmed.map((s, i) => `  ${i + 1}. ${s.name}`).join('\n') || '  (none yet)';
     const maybeList = maybes.length ? `\nMaybes:\n${maybes.map(s => `  - ${s.name}`).join('\n')}` : '';
-    const messageText = `🏀 Hoops reminder! Tonight 7:30-9:30pm. ${count}/15 spots filled. Sign up: ${siteUrl}`;
+    const maybeNote = maybes.length ? ` (+ ${maybes.length} maybe)` : '';
+    const messageText = `🏀 Hoops reminder! Tonight 7:30-9:30pm. ${confirmed.length} confirmed${maybeNote}. Sign up: ${siteUrl}`;
 
     await sendAdminEmail(
-      `🏀 Hoops — Monday 9am reminder (${count}/15 signed up)`,
+      `🏀 Hoops — Monday 9am reminder (${confirmed.length} confirmed${maybeNote})`,
       `Hey! Here's your reminder text to send to the group at 9am:\n\n` +
       `---\n${messageText}\n---\n\n` +
       `Current signup list (${confirmed.length} confirmed, ${maybes.length} maybe):\n${confirmedList}${maybeList}\n\n` +
       `Manage signups: ${siteUrl}/admin`
     );
     console.log('Monday reminder email sent.');
+    return;
+  }
+
+  if (type === 'monday-noon-reminder') {
+    const weekOf = getUpcomingMonday();
+    const signups = await getWeekSignups(weekOf);
+    const active = signups.filter(s => !s.cancelled);
+    const confirmed = active.filter(s => !s.maybe);
+    const maybes = active.filter(s => s.maybe);
+
+    const maybeNote = maybes.length ? ` (+ ${maybes.length} maybe)` : '';
+    const statusLine = confirmed.length < 10
+      ? `Only ${confirmed.length} confirmed${maybeNote} — need a few more guys!`
+      : `We're good to go for tonight! ${confirmed.length} confirmed${maybeNote}.`;
+
+    const messageText = `🏀 Hoops tonight 7:30-9:30pm. ${statusLine} Sign up: ${siteUrl}`;
+
+    await sendAdminEmail(
+      `🏀 Hoops noon check-in (${confirmed.length} confirmed${maybeNote})`,
+      `Here's your noon check-in text to send to the group:\n\n` +
+      `---\n${messageText}\n---\n\n` +
+      `Manage signups: ${siteUrl}/admin`
+    );
+    console.log('Monday noon reminder email sent.');
     return;
   }
 
