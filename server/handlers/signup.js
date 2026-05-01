@@ -5,6 +5,7 @@ const {
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
 const { getUpcomingMonday } = require('../lib/weekOf');
+const { sendAdminEmail } = require('../lib/email');
 
 const MAX_PLAYERS = 15;
 
@@ -83,6 +84,16 @@ async function createSignup(event) {
   });
 
   const cancelUrl = `${process.env.SITE_URL}/cancel/${cancelToken}`;
+
+  // Notify admin — fire and forget
+  const all2 = await getWeekSignups(weekOf);
+  const newCount = all2.filter(s => !s.cancelled).length;
+  const statusWord = maybe ? 'maybe' : 'signed up';
+  sendAdminEmail(
+    `🏀 ${name.trim()} ${statusWord} (${newCount}/15)`,
+    `${name.trim()} just ${statusWord} for Monday hoops.\n\nCurrent count: ${newCount}/15\n\nManage: ${process.env.SITE_URL}/admin`
+  ).catch(err => console.error('Signup notification email failed:', err.message));
+
   return resp(200, {
     success: true,
     message: maybe ? "You're down as a maybe!" : "You're signed up!",
@@ -110,6 +121,12 @@ async function cancelByToken(event) {
   if (signup.cancelled) return resp(410, { error: 'Already cancelled.' });
 
   await cancelSignup(signup.weekOf, signup.phone);
+
+  sendAdminEmail(
+    `🏀 ${signup.name} cancelled`,
+    `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+  ).catch(err => console.error('Cancel notification email failed:', err.message));
+
   return resp(200, { success: true, message: 'Your signup has been cancelled.' });
 }
 
@@ -127,6 +144,12 @@ async function cancelByPhone(event) {
   }
 
   await cancelSignup(weekOf, formattedPhone);
+
+  sendAdminEmail(
+    `🏀 ${signup.name} cancelled`,
+    `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+  ).catch(err => console.error('Cancel notification email failed:', err.message));
+
   return resp(200, { success: true, message: 'Your signup has been cancelled.' });
 }
 

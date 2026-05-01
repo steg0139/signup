@@ -159,7 +159,7 @@ export default function SignupPage() {
             <div className={`alert alert-${message.type}`}>{message.text}</div>
           )}
           <form onSubmit={handleSignup}>
-            <label htmlFor="name">Name</label>
+            <label htmlFor="name">First and last name</label>
             <input
               id="name"
               type="text"
