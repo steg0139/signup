@@ -129,6 +129,8 @@ class HoopsStack extends Stack {
     const adminPlayerPhone = adminPlayers.addResource('{phone}');
     adminPlayerPhone.addMethod('PATCH', adminIntegration);
     adminPlayerPhone.addMethod('DELETE', adminIntegration);
+    const adminPlayerHistory = adminPlayerPhone.addResource('history');
+    adminPlayerHistory.addMethod('DELETE', adminIntegration);
 
     // ── CloudFront distribution ───────────────────────────────────────────────
     // API Gateway origin — strips the /prod stage prefix via path rewrite

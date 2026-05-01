@@ -44,7 +44,6 @@ export default function AdminPage() {
   }, [password]);
 
   const fetchStats = useCallback(async () => {
-    if (statsLoaded) return;
     try {
       const { ok, data } = await apiFetch('/admin/stats', { headers: adminHeaders });
       if (ok) { setStats(data.stats); setStatsLoaded(true); }
@@ -52,7 +51,7 @@ export default function AdminPage() {
     } catch {
       setStatsError('Failed to load stats.');
     }
-  }, [password, statsLoaded]);
+  }, [password]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -103,6 +102,14 @@ export default function AdminPage() {
     if (!confirm('Remove this player from the roster?')) return;
     await apiFetch(`/admin/players/${encodeURIComponent(phone)}`, { method: 'DELETE', headers: adminHeaders });
     fetchRoster();
+  }
+
+  async function deletePlayerAndHistory(phone, name) {
+    if (!confirm(`Delete ${name} and all their signup history? This will remove them from the leaderboard and cannot be undone.`)) return;
+    await apiFetch(`/admin/players/${encodeURIComponent(phone)}/history`, { method: 'DELETE', headers: adminHeaders });
+    fetchRoster();
+    setStatsLoaded(false);
+    fetchStats();
   }
 
   async function addPlayer(e) {
@@ -260,7 +267,10 @@ export default function AdminPage() {
                             <span className="toggle-slider" />
                           </label>
                         </td>
-                        <td><button className="btn-danger btn-sm" onClick={() => deletePlayer(p.phone)}>Remove</button></td>
+                        <td style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn-danger btn-sm" onClick={() => deletePlayer(p.phone)}>Remove</button>
+                          <button className="btn-danger btn-sm" style={{ opacity: 0.7 }} onClick={() => deletePlayerAndHistory(p.phone, p.name)}>+ History</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -305,6 +315,7 @@ export default function AdminPage() {
                     <th>Streak</th>
                     <th>Best</th>
                     <th>Last played</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -325,6 +336,11 @@ export default function AdminPage() {
                         {p.lastPlayed
                           ? new Date(p.lastPlayed + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                           : '—'}
+                      </td>
+                      <td>
+                        <button className="btn-danger btn-sm" onClick={() => deletePlayerAndHistory(p.phone, p.name)}>
+                          Remove
+                        </button>
                       </td>
                     </tr>
                   ))}

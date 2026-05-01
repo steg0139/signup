@@ -68,6 +68,7 @@ app.all('/api/admin/signups', (req, res) => callHandler(adminHandler.handler, re
 app.all('/api/admin/signups/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
 app.all('/api/admin/stats', (req, res) => callHandler(adminHandler.handler, req, res));
 app.all('/api/admin/players', (req, res) => callHandler(adminHandler.handler, req, res));
+app.all('/api/admin/players/:phone/history', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
 app.all('/api/admin/players/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
 
 app.get('/api/health', (req, res) => res.json({ ok: true }));

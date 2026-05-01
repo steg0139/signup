@@ -67,6 +67,52 @@ async function deletePlayer(phone) {
   }));
 }
 
+/**
+ * Delete a player and all their signup history.
+ * Uses the phone-index GSI to find all signup items, then batch deletes them.
+ */
+async function deletePlayerAndHistory(phone) {
+  // Delete the player record (ignore if already gone)
+  await ddb.send(new DeleteCommand({
+    TableName: TABLE,
+    Key: playerKey(phone),
+  })).catch(() => {});
+
+  // Find all signup items via GSI
+  const gsiRes = await ddb.send(new QueryCommand({
+    TableName: TABLE,
+    IndexName: 'phone-index',
+    KeyConditionExpression: 'phone = :phone',
+    ExpressionAttributeValues: { ':phone': phone },
+  }));
+
+  // Also scan for any items written before the GSI existed (missing phone attribute)
+  const scanRes = await ddb.send(new ScanCommand({
+    TableName: TABLE,
+    FilterExpression: 'sk = :sk AND itemType = :t',
+    ExpressionAttributeValues: {
+      ':sk': `PHONE#${phone}`,
+      ':t': 'SIGNUP',
+    },
+  }));
+
+  // Merge and deduplicate by pk+sk
+  const seen = new Set();
+  const items = [...(gsiRes.Items || []), ...(scanRes.Items || [])].filter(item => {
+    const key = `${item.pk}|${item.sk}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  for (const item of items) {
+    await ddb.send(new DeleteCommand({
+      TableName: TABLE,
+      Key: { pk: item.pk, sk: item.sk },
+    }));
+  }
+}
+
 async function getAllPlayers() {
   // Scan for all PLAYER items
   const res = await ddb.send(new ScanCommand({
@@ -245,12 +291,12 @@ async function getAttendanceStats() {
     });
   }
 
-  // Sort by total descending
-  return stats.sort((a, b) => b.total - a.total);
+  // Sort by total descending, exclude anyone with 0 attended games
+  return stats.filter(s => s.total > 0).sort((a, b) => b.total - a.total);
 }
 
 module.exports = {
-  getPlayer, putPlayer, updatePlayer, deletePlayer, getAllPlayers,
+  getPlayer, putPlayer, updatePlayer, deletePlayer, deletePlayerAndHistory, getAllPlayers,
   getSignup, getSignupByToken, putSignup, cancelSignup, getWeekSignups,
   getSignupsByPhone, getAttendanceStats,
 };

@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const {
   getWeekSignups, cancelSignup, putSignup,
-  getAllPlayers, getPlayer, putPlayer, updatePlayer, deletePlayer,
+  getAllPlayers, getPlayer, putPlayer, updatePlayer, deletePlayer, deletePlayerAndHistory,
   getAttendanceStats,
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
@@ -116,10 +116,17 @@ async function patchPlayer(event) {
   return resp(200, { success: true });
 }
 
-// DELETE /admin/players/{phone}
+// DELETE /admin/players/{phone} - remove from roster only
 async function removePlayer(event) {
   const phone = decodeURIComponent(event.pathParameters?.phone);
   await deletePlayer(phone);
+  return resp(200, { success: true });
+}
+
+// DELETE /admin/players/{phone}/history - remove player + all signup history
+async function removePlayerAndHistory(event) {
+  const phone = decodeURIComponent(event.pathParameters?.phone);
+  await deletePlayerAndHistory(phone);
   return resp(200, { success: true });
 }
 
@@ -139,6 +146,7 @@ exports.handler = async (event) => {
     if (method === 'GET'    && path === '/api/admin/players')              return await getPlayers(event);
     if (method === 'POST'   && path === '/api/admin/players')              return await addPlayer(event);
     if (method === 'PATCH'  && path.startsWith('/api/admin/players/'))     return await patchPlayer(event);
+    if (method === 'DELETE' && path.endsWith('/history'))                  return await removePlayerAndHistory(event);
     if (method === 'DELETE' && path.startsWith('/api/admin/players/'))     return await removePlayer(event);
     return resp(404, { error: 'Not found.' });
   } catch (err) {
