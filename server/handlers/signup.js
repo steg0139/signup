@@ -85,14 +85,18 @@ async function createSignup(event) {
 
   const cancelUrl = `${process.env.SITE_URL}/cancel/${cancelToken}`;
 
-  // Notify admin — fire and forget
+  // Notify admin
   const all2 = await getWeekSignups(weekOf);
   const newCount = all2.filter(s => !s.cancelled).length;
   const statusWord = maybe ? 'maybe' : 'signed up';
-  sendAdminEmail(
-    `🏀 ${name.trim()} ${statusWord} (${newCount}/15)`,
-    `${name.trim()} just ${statusWord} for Monday hoops.\n\nCurrent count: ${newCount}/15\n\nManage: ${process.env.SITE_URL}/admin`
-  ).catch(err => console.error('Signup notification email failed:', err.message));
+  try {
+    await sendAdminEmail(
+      `🏀 ${name.trim()} ${statusWord} (${newCount}/15)`,
+      `${name.trim()} just ${statusWord} for Monday hoops.\n\nCurrent count: ${newCount}/15\n\nManage: ${process.env.SITE_URL}/admin`
+    );
+  } catch (err) {
+    console.error('Signup notification email failed:', err.message);
+  }
 
   return resp(200, {
     success: true,
@@ -122,10 +126,14 @@ async function cancelByToken(event) {
 
   await cancelSignup(signup.weekOf, signup.phone);
 
-  sendAdminEmail(
-    `🏀 ${signup.name} cancelled`,
-    `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
-  ).catch(err => console.error('Cancel notification email failed:', err.message));
+  try {
+    await sendAdminEmail(
+      `🏀 ${signup.name} cancelled`,
+      `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+    );
+  } catch (err) {
+    console.error('Cancel notification email failed:', err.message);
+  }
 
   return resp(200, { success: true, message: 'Your signup has been cancelled.' });
 }
@@ -145,10 +153,14 @@ async function cancelByPhone(event) {
 
   await cancelSignup(weekOf, formattedPhone);
 
-  sendAdminEmail(
-    `🏀 ${signup.name} cancelled`,
-    `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
-  ).catch(err => console.error('Cancel notification email failed:', err.message));
+  try {
+    await sendAdminEmail(
+      `🏀 ${signup.name} cancelled`,
+      `${signup.name} cancelled their spot for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+    );
+  } catch (err) {
+    console.error('Cancel notification email failed:', err.message);
+  }
 
   return resp(200, { success: true, message: 'Your signup has been cancelled.' });
 }
