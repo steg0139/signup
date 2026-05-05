@@ -187,10 +187,10 @@ class HoopsStack extends Stack {
       })],
     });
 
-    // Monday 8:30am CT = 13:30 UTC (CDT/summer) — email with day-of reminder
+    // Monday 7:30am CT = 12:30 UTC (CDT/summer) — email with day-of reminder
     new events.Rule(this, 'MondayReminderRule', {
       ruleName: 'hoops-monday-reminder',
-      schedule: events.Schedule.cron({ minute: '30', hour: '13', weekDay: 'MON' }),
+      schedule: events.Schedule.cron({ minute: '30', hour: '12', weekDay: 'MON' }),
       targets: [new targets.LambdaFunction(schedulerFn, {
         event: events.RuleTargetInput.fromObject({ 'detail-type': 'monday-reminder' }),
       })],

@@ -192,7 +192,10 @@ export default function AdminPage() {
                     {activeSignups.map((s, i) => (
                       <tr key={s.phone}>
                         <td>{i + 1}</td>
-                        <td>{s.name}</td>
+                        <td>
+                          {s.name}
+                          {s.note && <div className="subtext" style={{ marginTop: '0.15rem' }}>{s.note}</div>}
+                        </td>
                         <td>{s.phone}</td>
                         <td>
                           {s.maybe

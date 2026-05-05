@@ -37,14 +37,14 @@ async function getList(event) {
     maybeCount: maybes.length,
     max: MAX_PLAYERS,
     full: active.length >= MAX_PLAYERS,
-    signups: confirmed.map(s => ({ id: s.phone, name: s.name, signedUpAt: s.signedUpAt })),
-    maybes: maybes.map(s => ({ id: s.phone, name: s.name, signedUpAt: s.signedUpAt })),
+    signups: confirmed.map(s => ({ id: s.phone, name: s.name, note: s.note || '', signedUpAt: s.signedUpAt })),
+    maybes: maybes.map(s => ({ id: s.phone, name: s.name, note: s.note || '', signedUpAt: s.signedUpAt })),
   });
 }
 
 // POST /signup
 async function createSignup(event) {
-  const { name, phone, maybe } = JSON.parse(event.body || '{}');
+  const { name, phone, maybe, note } = JSON.parse(event.body || '{}');
 
   if (!name || !phone) {
     return resp(400, { error: 'Name and phone are required.' });
@@ -79,6 +79,7 @@ async function createSignup(event) {
     cancelToken,
     weekOf,
     maybe: !!maybe,
+    note: note ? note.trim() : '',
     cancelled: false,
     signedUpAt: new Date().toISOString(),
   });
@@ -92,7 +93,7 @@ async function createSignup(event) {
   try {
     await sendAdminEmail(
       `🏀 ${name.trim()} ${statusWord} (${newCount}/15)`,
-      `${name.trim()} just ${statusWord} for Monday hoops.\n\nCurrent count: ${newCount}/15\n\nManage: ${process.env.SITE_URL}/admin`
+      `${name.trim()} just ${statusWord} for Monday hoops.${note ? `\n\nNote: "${note.trim()}"` : ''}\n\nCurrent count: ${newCount}/15\n\nManage: ${process.env.SITE_URL}/admin`
     );
   } catch (err) {
     console.error('Signup notification email failed:', err.message);

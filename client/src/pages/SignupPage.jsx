@@ -7,6 +7,7 @@ export default function SignupPage() {
   const [list, setList] = useState(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [note, setNote] = useState('');
   const [cancelPhone, setCancelPhone] = useState('');
   const [message, setMessage] = useState(null);
   const [cancelMessage, setCancelMessage] = useState(null);
@@ -35,12 +36,13 @@ export default function SignupPage() {
     try {
       const { ok, data } = await apiFetch('/signup', {
         method: 'POST',
-        body: JSON.stringify({ name, phone, maybe }),
+        body: JSON.stringify({ name, phone, maybe, note }),
       });
       if (ok) {
         setMessage({ type: 'success', text: data.message });
         setName('');
         setPhone('');
+        setNote('');
         fetchList();
       } else {
         setMessage({ type: 'error', text: data.error });
@@ -120,29 +122,44 @@ export default function SignupPage() {
           />
         </div>
 
-        {/* Confirmed list */}
+        {/* Confirmed list — 2 columns */}
         {list && list.signups.length > 0 && (
-          <ul className="player-list" style={{ marginTop: '0.75rem' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0 1rem',
+            marginTop: '0.75rem',
+          }}>
             {list.signups.map((s, i) => (
-              <li key={s.id}>
+              <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', padding: '0.45rem 0' }}>
                 <span className="player-number">{i + 1}</span>
-                <span className="player-name">{s.name}</span>
-              </li>
+                <div style={{ flex: 1, paddingLeft: '0.5rem' }}>
+                  <div style={{ fontSize: '0.95rem' }}>{s.name}</div>
+                  {s.note && <div className="subtext" style={{ fontSize: '0.75rem', marginTop: '0.1rem' }}>{s.note}</div>}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
 
-        {/* Maybes list */}
+        {/* Maybes list — 2 columns */}
         {list && list.maybes && list.maybes.length > 0 && (
           <>
             <p className="subtext" style={{ marginTop: '1rem', marginBottom: '0.25rem', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '0.7rem' }}>Maybes</p>
-            <ul className="player-list maybe-list">
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '0 1rem',
+            }}>
               {list.maybes.map(s => (
-                <li key={s.id}>
-                  <span className="player-name" style={{ paddingLeft: 0, color: 'var(--yellow)' }}>{s.name}</span>
-                </li>
+                <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', padding: '0.45rem 0' }}>
+                  <div style={{ flex: 1, color: 'var(--yellow)', fontSize: '0.95rem' }}>
+                    {s.name}
+                    {s.note && <div className="subtext" style={{ fontSize: '0.75rem', marginTop: '0.1rem', color: 'var(--text-muted)' }}>{s.note}</div>}
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           </>
         )}
 
@@ -178,6 +195,15 @@ export default function SignupPage() {
               onChange={e => setPhone(e.target.value)}
               required
               autoComplete="tel"
+            />
+            <label htmlFor="note">Note <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+            <input
+              id="note"
+              type="text"
+              placeholder="e.g. might be a few minutes late"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              maxLength={120}
             />
             <p className="subtext" style={{ marginBottom: '1rem' }}>
               Need to cancel? Use the link below or enter your phone number.
