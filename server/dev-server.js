@@ -62,8 +62,8 @@ async function callHandler(handler, req, res, paramNames = []) {
 // Routes without path params
 app.all('/api/signup', (req, res) => callHandler(signupHandler.handler, req, res));
 app.all('/api/signup/cancel-by-phone', (req, res) => callHandler(signupHandler.handler, req, res));
+app.all('/api/signup/manage-by-phone', (req, res) => callHandler(signupHandler.handler, req, res));
 app.all('/api/signup/cancel/:token', (req, res) => callHandler(signupHandler.handler, req, res, ['token']));
-
 app.all('/api/admin/signups', (req, res) => callHandler(adminHandler.handler, req, res));
 app.all('/api/admin/signups/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
 app.all('/api/admin/stats', (req, res) => callHandler(adminHandler.handler, req, res));

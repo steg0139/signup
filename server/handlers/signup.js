@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const {
-  getSignup, getSignupByToken, putSignup, cancelSignup,
+  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe,
   getWeekSignups, getPlayer, putPlayer, updatePlayer,
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
@@ -106,7 +106,7 @@ async function createSignup(event) {
   });
 }
 
-// GET /signup/cancel/{token}
+// GET /signup/cancel/{token} — returns signup info including maybe status
 async function getCancelInfo(event) {
   const token = event.pathParameters?.token;
   const signup = await getSignupByToken(token);
@@ -114,7 +114,31 @@ async function getCancelInfo(event) {
   if (!signup) return resp(404, { error: 'Invalid cancel link.' });
   if (signup.cancelled) return resp(410, { error: 'This signup is already cancelled.' });
 
-  return resp(200, { name: signup.name, weekOf: signup.weekOf });
+  return resp(200, { name: signup.name, weekOf: signup.weekOf, maybe: signup.maybe });
+}
+
+// PATCH /signup/cancel/{token} — update maybe status
+async function updateByToken(event) {
+  const token = event.pathParameters?.token;
+  const { maybe } = JSON.parse(event.body || '{}');
+  const signup = await getSignupByToken(token);
+
+  if (!signup) return resp(404, { error: 'Invalid link.' });
+  if (signup.cancelled) return resp(410, { error: 'This signup is already cancelled.' });
+
+  await updateSignupMaybe(signup.weekOf, signup.phone, !!maybe);
+
+  const newStatus = maybe ? 'maybe' : 'confirmed';
+  try {
+    await sendAdminEmail(
+      `🏀 ${signup.name} updated to ${newStatus}`,
+      `${signup.name} changed their status to ${newStatus} for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+    );
+  } catch (err) {
+    console.error('Update notification email failed:', err.message);
+  }
+
+  return resp(200, { success: true, maybe: !!maybe });
 }
 
 // POST /signup/cancel/{token}
@@ -166,6 +190,23 @@ async function cancelByPhone(event) {
   return resp(200, { success: true, message: 'Your signup has been cancelled.' });
 }
 
+// POST /signup/manage-by-phone — returns the manage URL for a player's signup
+async function manageByPhone(event) {
+  const { phone } = JSON.parse(event.body || '{}');
+  if (!phone) return resp(400, { error: 'Phone number is required.' });
+
+  const formattedPhone = formatPhone(phone);
+  const weekOf = getUpcomingMonday();
+
+  const signup = await getSignup(weekOf, formattedPhone);
+  if (!signup || signup.cancelled) {
+    return resp(404, { error: "We couldn't find an active signup for that number this week." });
+  }
+
+  const manageUrl = `${process.env.SITE_URL}/cancel/${signup.cancelToken}`;
+  return resp(200, { manageUrl });
+}
+
 // Router — API Gateway sends all /signup routes here
 exports.handler = async (event) => {
   const method = event.httpMethod;
@@ -175,8 +216,10 @@ exports.handler = async (event) => {
     if (method === 'GET' && path === '/api/signup') return await getList(event);
     if (method === 'POST' && path === '/api/signup') return await createSignup(event);
     if (method === 'GET' && path.startsWith('/api/signup/cancel/')) return await getCancelInfo(event);
+    if (method === 'PATCH' && path.startsWith('/api/signup/cancel/')) return await updateByToken(event);
     if (method === 'POST' && path.startsWith('/api/signup/cancel/') && !path.endsWith('cancel-by-phone')) return await cancelByToken(event);
     if (method === 'POST' && path === '/api/signup/cancel-by-phone') return await cancelByPhone(event);
+    if (method === 'POST' && path === '/api/signup/manage-by-phone') return await manageByPhone(event);
     if (method === 'OPTIONS') return resp(200, {});
     return resp(404, { error: 'Not found.' });
   } catch (err) {

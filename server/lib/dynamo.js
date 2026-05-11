@@ -177,6 +177,15 @@ async function cancelSignup(weekOf, phone) {
   }));
 }
 
+async function updateSignupMaybe(weekOf, phone, maybe) {
+  await ddb.send(new UpdateCommand({
+    TableName: TABLE,
+    Key: signupKey(weekOf, phone),
+    UpdateExpression: 'SET maybe = :m',
+    ExpressionAttributeValues: { ':m': maybe },
+  }));
+}
+
 async function getWeekSignups(weekOf) {
   const res = await ddb.send(new QueryCommand({
     TableName: TABLE,
@@ -297,6 +306,6 @@ async function getAttendanceStats() {
 
 module.exports = {
   getPlayer, putPlayer, updatePlayer, deletePlayer, deletePlayerAndHistory, getAllPlayers,
-  getSignup, getSignupByToken, putSignup, cancelSignup, getWeekSignups,
+  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe, getWeekSignups,
   getSignupsByPhone, getAttendanceStats,
 };

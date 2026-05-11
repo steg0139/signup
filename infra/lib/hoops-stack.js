@@ -107,11 +107,14 @@ class HoopsStack extends Stack {
 
     const cancelByPhone = signupResource.addResource('cancel-by-phone');
     cancelByPhone.addMethod('POST', signupIntegration);
+    const manageByPhone = signupResource.addResource('manage-by-phone');
+    manageByPhone.addMethod('POST', signupIntegration);
 
     const cancelResource = signupResource.addResource('cancel');
     const cancelToken = cancelResource.addResource('{token}');
     cancelToken.addMethod('GET', signupIntegration);
     cancelToken.addMethod('POST', signupIntegration);
+    cancelToken.addMethod('PATCH', signupIntegration);
 
     const adminResource = apiRoot.addResource('admin');
     const adminSignups = adminResource.addResource('signups');
