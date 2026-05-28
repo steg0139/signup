@@ -65,8 +65,7 @@ app.all('/api/signup/cancel-by-phone', (req, res) => callHandler(signupHandler.h
 app.all('/api/signup/manage-by-phone', (req, res) => callHandler(signupHandler.handler, req, res));
 app.all('/api/signup/cancel/:token', (req, res) => callHandler(signupHandler.handler, req, res, ['token']));
 app.all('/api/admin/signups', (req, res) => callHandler(adminHandler.handler, req, res));
-app.all('/api/admin/signups/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
-app.all('/api/admin/stats', (req, res) => callHandler(adminHandler.handler, req, res));
+app.all('/api/admin/signups/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));app.all('/api/admin/stats', (req, res) => callHandler(adminHandler.handler, req, res));
 app.all('/api/admin/players', (req, res) => callHandler(adminHandler.handler, req, res));
 app.all('/api/admin/players/:phone/history', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));
 app.all('/api/admin/players/:phone', (req, res) => callHandler(adminHandler.handler, req, res, ['phone']));

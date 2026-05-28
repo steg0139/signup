@@ -122,6 +122,7 @@ class HoopsStack extends Stack {
     adminSignups.addMethod('POST', adminIntegration);
     const adminSignupPhone = adminSignups.addResource('{phone}');
     adminSignupPhone.addMethod('DELETE', adminIntegration);
+    adminSignupPhone.addMethod('PATCH', adminIntegration);
 
     const adminStats = adminResource.addResource('stats');
     adminStats.addMethod('GET', adminIntegration);

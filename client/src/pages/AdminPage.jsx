@@ -77,6 +77,15 @@ export default function AdminPage() {
     fetchSignups();
   }
 
+  async function updateSignupStatus(phone, status) {
+    await apiFetch(`/admin/signups/${encodeURIComponent(phone)}`, {
+      method: 'PATCH',
+      headers: adminHeaders,
+      body: JSON.stringify({ status }),
+    });
+    fetchSignups();
+  }
+
   async function addSignup(e) {
     e.preventDefault();
     setAddError(''); setAddSuccess('');
@@ -203,7 +212,14 @@ export default function AdminPage() {
                             : <span className="badge badge-open">In</span>}
                         </td>
                         <td className="subtext">{new Date(s.signedUpAt).toLocaleString()}</td>
-                        <td><button className="btn-danger btn-sm" onClick={() => removeSignup(s.phone)}>Remove</button></td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {s.maybe ? (
+                            <button className="btn-sm" style={{ background: 'var(--green)', color: 'white', marginRight: '0.3rem' }} onClick={() => updateSignupStatus(s.phone, 'in')}>→ In</button>
+                          ) : (
+                            <button className="btn-sm btn-maybe" style={{ marginRight: '0.3rem' }} onClick={() => updateSignupStatus(s.phone, 'maybe')}>→ Maybe</button>
+                          )}
+                          <button className="btn-danger btn-sm" onClick={() => removeSignup(s.phone)}>Out</button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

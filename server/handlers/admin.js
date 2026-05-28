@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const {
-  getWeekSignups, cancelSignup, putSignup,
+  getWeekSignups, cancelSignup, updateSignupMaybe, putSignup,
   getAllPlayers, getPlayer, putPlayer, updatePlayer, deletePlayer, deletePlayerAndHistory,
   getAttendanceStats,
 } = require('../lib/dynamo');
@@ -38,6 +38,25 @@ async function removeSignup(event) {
   const phone = decodeURIComponent(event.pathParameters?.phone);
   const weekOf = getUpcomingMonday();
   await cancelSignup(weekOf, phone);
+  return resp(200, { success: true });
+}
+
+// PATCH /admin/signups/{phone} — update status (maybe/confirmed/cancelled)
+async function updateSignupStatus(event) {
+  const phone = decodeURIComponent(event.pathParameters?.phone);
+  const { status } = JSON.parse(event.body || '{}');
+  const weekOf = getUpcomingMonday();
+
+  if (status === 'cancelled') {
+    await cancelSignup(weekOf, phone);
+  } else if (status === 'in') {
+    await updateSignupMaybe(weekOf, phone, false);
+  } else if (status === 'maybe') {
+    await updateSignupMaybe(weekOf, phone, true);
+  } else {
+    return resp(400, { error: 'Invalid status. Use: in, maybe, or cancelled.' });
+  }
+
   return resp(200, { success: true });
 }
 
@@ -141,6 +160,7 @@ exports.handler = async (event) => {
   try {
     if (method === 'GET'    && path === '/api/admin/signups')              return await getSignups(event);
     if (method === 'POST'   && path === '/api/admin/signups')              return await addSignup(event);
+    if (method === 'PATCH'  && path.startsWith('/api/admin/signups/'))     return await updateSignupStatus(event);
     if (method === 'DELETE' && path.startsWith('/api/admin/signups/'))     return await removeSignup(event);
     if (method === 'GET'    && path === '/api/admin/stats')                return await getStats(event);
     if (method === 'GET'    && path === '/api/admin/players')              return await getPlayers(event);
