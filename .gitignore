@@ -11,3 +11,9 @@ cdk.out/
 
 # Local DB (old SQLite, no longer used)
 *.db
+
+# Workflow/agent tooling artifacts
+.agents/
+
+# macOS
+.DS_Store

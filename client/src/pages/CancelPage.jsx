@@ -6,9 +6,11 @@ export default function CancelPage() {
   const { token } = useParams();
   const [info, setInfo] = useState(null);
   const [pageStatus, setPageStatus] = useState('loading'); // loading | ready | done | error
+  const [name, setName] = useState('');
+  const [note, setNote] = useState('');
   const [maybe, setMaybe] = useState(false);
-  const [message, setMessage] = useState('');
-  const [actionLoading, setActionLoading] = useState(null); // 'confirm' | 'maybe' | 'cancel'
+  const [message, setMessage] = useState(null); // { type, text }
+  const [actionLoading, setActionLoading] = useState(null); // 'save' | 'cancel'
 
   useEffect(() => {
     async function fetchInfo() {
@@ -16,38 +18,44 @@ export default function CancelPage() {
         const { ok, status, data } = await apiFetch(`/signup/cancel/${token}`);
         if (ok) {
           setInfo(data);
+          setName(data.name || '');
+          setNote(data.note || '');
           setMaybe(!!data.maybe);
           setPageStatus('ready');
         } else if (status === 410) {
           setPageStatus('done');
-          setMessage('This signup is already cancelled.');
+          setMessage({ type: 'success', text: 'This signup is already cancelled.' });
         } else {
           setPageStatus('error');
-          setMessage(data.error || 'Invalid link.');
+          setMessage({ type: 'error', text: data.error || 'Invalid link.' });
         }
       } catch {
         setPageStatus('error');
-        setMessage('Something went wrong.');
+        setMessage({ type: 'error', text: 'Something went wrong.' });
       }
     }
     fetchInfo();
   }, [token]);
 
-  async function handleUpdate(newMaybe) {
-    setActionLoading(newMaybe ? 'maybe' : 'confirm');
+  async function handleSave(e) {
+    e.preventDefault();
+    setActionLoading('save');
+    setMessage(null);
     try {
       const { ok, data } = await apiFetch(`/signup/cancel/${token}`, {
         method: 'PATCH',
-        body: JSON.stringify({ maybe: newMaybe }),
+        body: JSON.stringify({ name, maybe, note }),
       });
       if (ok) {
-        setMaybe(newMaybe);
-        setMessage(newMaybe ? "Updated to maybe — we'll keep your spot for now." : "You're confirmed as in!");
+        setName(data.name);
+        setNote(data.note);
+        setMaybe(!!data.maybe);
+        setMessage({ type: 'success', text: 'Saved — your signup is updated.' });
       } else {
-        setMessage(data.error || 'Something went wrong.');
+        setMessage({ type: 'error', text: data.error || 'Something went wrong.' });
       }
     } catch {
-      setMessage('Something went wrong.');
+      setMessage({ type: 'error', text: 'Something went wrong.' });
     } finally {
       setActionLoading(null);
     }
@@ -55,16 +63,17 @@ export default function CancelPage() {
 
   async function handleCancel() {
     setActionLoading('cancel');
+    setMessage(null);
     try {
       const { ok, data } = await apiFetch(`/signup/cancel/${token}`, { method: 'POST' });
       if (ok) {
         setPageStatus('done');
-        setMessage('Your spot has been cancelled.');
+        setMessage({ type: 'success', text: 'Your spot has been cancelled.' });
       } else {
-        setMessage(data.error || 'Something went wrong.');
+        setMessage({ type: 'error', text: data.error || 'Something went wrong.' });
       }
     } catch {
-      setMessage('Something went wrong.');
+      setMessage({ type: 'error', text: 'Something went wrong.' });
     } finally {
       setActionLoading(null);
     }
@@ -85,50 +94,87 @@ export default function CancelPage() {
       {pageStatus === 'ready' && info && (
         <div className="card">
           <h2>Manage your signup</h2>
-          <p style={{ marginBottom: '0.25rem' }}>
-            Hey <strong>{info.name}</strong> — you're signed up for <strong>{mondayLabel}</strong>.
-          </p>
           <p className="subtext" style={{ marginBottom: '1.5rem' }}>
-            Current status: <span style={{ color: maybe ? 'var(--yellow)' : 'var(--green)', fontWeight: 600 }}>
-              {maybe ? 'Maybe' : 'In ✓'}
-            </span>
+            You're signed up for <strong>{mondayLabel}</strong>.
           </p>
 
           {message && (
-            <div className="alert alert-success" style={{ marginBottom: '1rem' }}>{message}</div>
+            <div className={`alert alert-${message.type}`}>{message.text}</div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {maybe && (
-              <button
-                className="btn-primary"
-                onClick={() => handleUpdate(false)}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === 'confirm' ? 'Updating...' : "I'm in — confirm my spot"}
-              </button>
-            )}
+          <form onSubmit={handleSave}>
+            <label htmlFor="name">First and last name</label>
+            <input
+              id="name"
+              type="text"
+              placeholder="Your name"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              required
+              autoComplete="name"
+            />
 
-            {!maybe && (
-              <button
-                className="btn-maybe"
-                style={{ width: '100%', padding: '0.75rem' }}
-                onClick={() => handleUpdate(true)}
-                disabled={!!actionLoading}
-              >
-                {actionLoading === 'maybe' ? 'Updating...' : 'Change to maybe'}
-              </button>
-            )}
+            <label htmlFor="phone">Phone number</label>
+            <input id="phone" type="tel" value={info.phone || ''} disabled autoComplete="tel" />
+
+            <label htmlFor="note">Note <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+            <input
+              id="note"
+              type="text"
+              placeholder="e.g. might be a few minutes late"
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              maxLength={120}
+            />
+
+            <p className="subtext" style={{ marginBottom: '1rem' }}>
+              Status: <span style={{ color: maybe ? 'var(--yellow)' : 'var(--green)', fontWeight: 600 }}>
+                {maybe ? 'Maybe' : 'In ✓'}
+              </span>
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem' }}>
+              {maybe ? (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={() => setMaybe(false)}
+                  disabled={!!actionLoading}
+                >
+                  I'm in — confirm my spot
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-maybe"
+                  style={{ flex: 1, padding: '0.75rem' }}
+                  onClick={() => setMaybe(true)}
+                  disabled={!!actionLoading}
+                >
+                  Change to maybe
+                </button>
+              )}
+            </div>
 
             <button
-              className="btn-danger"
+              type="submit"
+              className="btn-primary"
               style={{ width: '100%', padding: '0.75rem' }}
-              onClick={handleCancel}
               disabled={!!actionLoading}
             >
-              {actionLoading === 'cancel' ? 'Cancelling...' : 'Cancel my spot'}
+              {actionLoading === 'save' ? 'Saving...' : 'Save changes'}
             </button>
-          </div>
+          </form>
+
+          <button
+            className="btn-danger"
+            style={{ width: '100%', padding: '0.75rem', marginTop: '0.75rem' }}
+            onClick={handleCancel}
+            disabled={!!actionLoading}
+          >
+            {actionLoading === 'cancel' ? 'Cancelling...' : 'Cancel my spot'}
+          </button>
 
           <div style={{ marginTop: '1rem', textAlign: 'center' }}>
             <Link to="/">← Back to signup</Link>
@@ -138,14 +184,14 @@ export default function CancelPage() {
 
       {pageStatus === 'done' && (
         <div className="card">
-          <div className="alert alert-success">{message}</div>
+          <div className="alert alert-success">{message?.text}</div>
           <Link to="/">← Back to signup</Link>
         </div>
       )}
 
       {pageStatus === 'error' && (
         <div className="card">
-          <div className="alert alert-error">{message}</div>
+          <div className="alert alert-error">{message?.text}</div>
           <Link to="/">← Back to signup</Link>
         </div>
       )}

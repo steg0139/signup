@@ -186,6 +186,26 @@ async function updateSignupMaybe(weekOf, phone, maybe) {
   }));
 }
 
+/**
+ * In-place update of editable signup fields (name, maybe, note) when the
+ * phone — part of the item key — is unchanged. Mirrors updatePlayer's
+ * dynamic-expression style.
+ */
+async function updateSignupFields(weekOf, phone, fields) {
+  const entries = Object.entries(fields);
+  const expr = entries.map((_, i) => `#f${i} = :v${i}`).join(', ');
+  const names = Object.fromEntries(entries.map(([k], i) => [`#f${i}`, k]));
+  const values = Object.fromEntries(entries.map(([, v], i) => [`:v${i}`, v]));
+
+  await ddb.send(new UpdateCommand({
+    TableName: TABLE,
+    Key: signupKey(weekOf, phone),
+    UpdateExpression: `SET ${expr}`,
+    ExpressionAttributeNames: names,
+    ExpressionAttributeValues: values,
+  }));
+}
+
 async function getWeekSignups(weekOf) {
   const res = await ddb.send(new QueryCommand({
     TableName: TABLE,
@@ -306,6 +326,6 @@ async function getAttendanceStats() {
 
 module.exports = {
   getPlayer, putPlayer, updatePlayer, deletePlayer, deletePlayerAndHistory, getAllPlayers,
-  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe, getWeekSignups,
+  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe, updateSignupFields, getWeekSignups,
   getSignupsByPhone, getAttendanceStats,
 };

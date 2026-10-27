@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const {
-  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe,
+  getSignup, getSignupByToken, putSignup, cancelSignup, updateSignupMaybe, updateSignupFields,
   getWeekSignups, getPlayer, putPlayer, updatePlayer,
 } = require('../lib/dynamo');
 const { formatPhone } = require('../lib/phone');
@@ -114,31 +114,64 @@ async function getCancelInfo(event) {
   if (!signup) return resp(404, { error: 'Invalid cancel link.' });
   if (signup.cancelled) return resp(410, { error: 'This signup is already cancelled.' });
 
-  return resp(200, { name: signup.name, weekOf: signup.weekOf, maybe: signup.maybe });
+  return resp(200, {
+    name: signup.name,
+    phone: signup.phone,
+    weekOf: signup.weekOf,
+    maybe: signup.maybe,
+    note: signup.note || '',
+  });
 }
 
-// PATCH /signup/cancel/{token} — update maybe status
+// PATCH /signup/cancel/{token} — update name, maybe status, and note.
+// Phone is the identity key and is not editable here.
 async function updateByToken(event) {
   const token = event.pathParameters?.token;
-  const { maybe } = JSON.parse(event.body || '{}');
+  const { name, maybe, note } = JSON.parse(event.body || '{}');
   const signup = await getSignupByToken(token);
 
   if (!signup) return resp(404, { error: 'Invalid link.' });
   if (signup.cancelled) return resp(410, { error: 'This signup is already cancelled.' });
 
-  await updateSignupMaybe(signup.weekOf, signup.phone, !!maybe);
+  if (!name || !name.trim()) {
+    return resp(400, { error: 'Name is required.' });
+  }
+
+  const trimmedName = name.trim();
+  const trimmedNote = note ? note.trim().slice(0, 120) : '';
+
+  await updateSignupFields(signup.weekOf, signup.phone, {
+    name: trimmedName,
+    maybe: !!maybe,
+    note: trimmedNote,
+  });
+
+  // Keep the roster name in sync, mirroring createSignup (best-effort).
+  if (signup.name !== trimmedName) {
+    try {
+      await updatePlayer(signup.phone, { name: trimmedName });
+    } catch (err) {
+      console.error('Roster name update failed:', err.message);
+    }
+  }
 
   const newStatus = maybe ? 'maybe' : 'confirmed';
   try {
     await sendAdminEmail(
-      `🏀 ${signup.name} updated to ${newStatus}`,
-      `${signup.name} changed their status to ${newStatus} for Monday hoops.\n\nManage: ${process.env.SITE_URL}/admin`
+      `🏀 ${trimmedName} updated to ${newStatus}`,
+      `${trimmedName} updated their signup to ${newStatus} for Monday hoops.${trimmedNote ? `\n\nNote: "${trimmedNote}"` : ''}\n\nManage: ${process.env.SITE_URL}/admin`
     );
   } catch (err) {
     console.error('Update notification email failed:', err.message);
   }
 
-  return resp(200, { success: true, maybe: !!maybe });
+  return resp(200, {
+    success: true,
+    name: trimmedName,
+    phone: signup.phone,
+    maybe: !!maybe,
+    note: trimmedNote,
+  });
 }
 
 // POST /signup/cancel/{token}
